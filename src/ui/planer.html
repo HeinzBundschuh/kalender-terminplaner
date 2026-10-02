@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Terminplaner</title>
+  <link rel="stylesheet" href="planer.css">
+</head>
+<body>
+  <div id="app">
+    <aside id="side">
+      <div class="mini">
+        <div class="mini-head">
+          <button id="miniPrev" class="mini-nav" title="Vorheriger Monat" data-t-title>◀</button>
+          <span id="miniTitle"></span>
+          <button id="miniNext" class="mini-nav" title="Nächster Monat" data-t-title>▶</button>
+        </div>
+        <table id="miniGrid"></table>
+        <button id="todayBtn" class="today-btn"><span class="today-box"></span><span data-t>Heute:</span> <span id="todayText"></span></button>
+      </div>
+
+      <div class="side-hol">
+        <div class="side-title" data-t>Feiertage</div>
+        <div class="hol-radios">
+          <label><input type="radio" name="holRegion" value="AT"> <span data-t>Österreich</span></label>
+          <label><input type="radio" name="holRegion" value="DE"> <span data-t>Deutschland</span></label>
+          <label><input type="radio" name="holRegion" value="CH"> <span data-t>Schweiz</span></label>
+          <label><input type="radio" name="holRegion" value="FR"> <span data-t>Frankreich</span></label>
+          <label><input type="radio" name="holRegion" value="IT"> <span data-t>Italien</span></label>
+          <label><input type="radio" name="holRegion" value="ES"> <span data-t>Spanien</span></label>
+          <label title="England &amp; Wales"><input type="radio" name="holRegion" value="GB"> <span data-t>England</span></label>
+          <label><input type="radio" name="holRegion" value="US"> <span data-t>USA</span></label>
+          <label><input type="radio" name="holRegion" value="none"> <span data-t>keine</span></label>
+        </div>
+        <label class="hol-spec"><input type="checkbox" id="holSpecial"> <span data-t>Sondertage anzeigen</span></label>
+      </div>
+
+      <div class="side-section">
+        <div class="side-title" data-t>Termine</div>
+        <div class="side-sub" data-t>innerhalb einer Woche</div>
+        <div id="weekList"></div>
+      </div>
+    </aside>
+
+    <main id="main">
+      <div id="topbar">
+        <button id="prevBtn" class="navbtn">&lt;&lt; <span data-t>vorheriger Monat</span></button>
+        <h1 id="monthTitle"></h1>
+        <button id="nextBtn" class="navbtn"><span data-t>nächster Monat</span> &gt;&gt;</button>
+      </div>
+      <div id="grid" tabindex="0"></div>
+    </main>
+  </div>
+
+  <footer id="statusbar">
+    <button id="sideToggle" class="sb-btn" title="Seitenleiste ein-/ausblenden" data-t-title>◧</button>
+    <label class="sb-opt"><input type="checkbox" id="pastel"> <span data-t>Pastellfarben</span></label>
+    <span class="sb-hint" data-t>Mausrad / Bild↑↓: Monat blättern · Pos1: heute · Doppelklick: Termin öffnen bzw. neu · Rechtsklick: Menü</span>
+    <span class="sb-spacer"></span>
+    <button id="refreshBtn" class="sb-btn" title="Neu laden" data-t-title>⟳</button>
+    <button id="hiddenBtn" class="sb-btn" title="Ausgeblendete und kompakte Termine verwalten" data-t-title></button>
+    <span id="countText" class="sb-count"></span>
+  </footer>
+
+  <div id="ctxMenu" class="ctx" hidden></div>
+  <div id="dayPop" class="daypop" hidden></div>
+  <div id="hiddenPop" class="hiddenpop" hidden></div>
+
+  <div id="dialog" class="dialog-backdrop" hidden>
+    <div class="dialog" role="dialog" aria-modal="true">
+      <h3 id="dlgTitle"></h3>
+      <p id="dlgText"></p>
+      <div id="dlgButtons" class="dlg-buttons"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="i18n.js"></script>
+  <script src="holidays.js"></script>
+  <script src="planer.js"></script>
+</body>
+</html>

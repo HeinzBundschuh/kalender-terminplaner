@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extName__",
+  "description": "__MSG_extDesc__",
+  "version": "1.4.0",
+  "author": "Heinz Bundschuh",
+  "default_locale": "en",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "kalender-terminplaner@heinz.at",
+      "strict_min_version": "128.0",
+      "strict_max_version": "158.*"
+    }
+  },
+  "icons": {
+    "32": "icons/icon.svg",
+    "64": "icons/icon.svg"
+  },
+  "permissions": [
+    "menus"
+  ],
+  "action": {
+    "default_title": "__MSG_actionTitle__",
+    "default_label": "__MSG_actionLabel__",
+    "default_icon": "icons/icon.svg",
+    "allowed_spaces": []
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "experiment_apis": {
+    "terminplaner": {
+      "schema": "api/schema.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "paths": [
+          [
+            "terminplaner"
+          ]
+        ],
+        "script": "api/implementation.js"
+      }
+    }
+  }
+}

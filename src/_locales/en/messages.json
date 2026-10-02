@@ -1,0 +1,17 @@
+{
+  "extName": {
+    "message": "Calendar Month Planner"
+  },
+  "extDesc": {
+    "message": "A clear month view in the style of classic desktop planners, in its own tab: flip month by month with the mouse wheel, open, create, hide, compact, export as ICS and delete events (with backup)."
+  },
+  "actionTitle": {
+    "message": "Open month planner"
+  },
+  "actionLabel": {
+    "message": "Planner"
+  },
+  "menuOpen": {
+    "message": "Open month planner"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "extName": {
+    "message": "Kalender-Terminplaner"
+  },
+  "extDesc": {
+    "message": "Übersichtliche Monatsansicht im Stil klassischer Terminplaner als eigener Tab: Monat für Monat per Mausrad blättern, Termine öffnen, anlegen, ausblenden, kompakt anzeigen, als ICS exportieren und löschen (mit Backup)."
+  },
+  "actionTitle": {
+    "message": "Terminplaner öffnen"
+  },
+  "actionLabel": {
+    "message": "Terminplaner"
+  },
+  "menuOpen": {
+    "message": "Terminplaner öffnen"
+  }
+}

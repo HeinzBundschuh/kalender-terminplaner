@@ -1,0 +1,225 @@
+/* Optik angelehnt an die Monatsansicht klassischer Terminplaner-Programme:
+   blaue Verlaufsköpfe (Mo–Fr), orange–gelbe Köpfe (Sa/So), graue Köpfe für
+   Tage anderer Monate, einzeilige gerahmte Einträge, KW-Spalte links. */
+:root {
+  --page: #e4edf5;
+  --line: #7ea6d8;
+  --cell: #ffffff;
+  --cell-other: #f3f3f3;
+  --kw: #5b8fd4;
+  --sel: #e8502a;
+  --text: #111;
+  --muted: #777;
+  --font: "Segoe UI", Tahoma, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: flex; flex-direction: column;
+  background: var(--page); color: var(--text);
+  font: 12px/1.3 var(--font);
+  overflow: hidden; user-select: none;
+}
+button { font: inherit; }
+
+#app { flex: 1; display: flex; min-height: 0; }
+
+/* ---------- Seitenleiste ---------- */
+#side {
+  width: 212px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;
+  padding: 8px 6px; background: #f7f9fb; border-right: 1px solid #c9d6e4;
+  overflow: hidden;
+}
+body.no-side #side { display: none; }
+.mini { background: #fff; border: 1px solid #c9d6e4; padding: 4px 4px 6px; }
+.mini-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.mini-nav { border: 0; background: none; cursor: pointer; font-size: 10px; color: #333; padding: 2px 5px; }
+#miniTitle { font-weight: 600; }
+#miniGrid { width: 100%; border-collapse: collapse; text-align: center; font-size: 11px; }
+#miniGrid th { font-weight: normal; color: #333; padding: 1px 0; }
+#miniGrid td { padding: 1px 0; cursor: pointer; }
+#miniGrid td.kw { color: var(--kw); border-right: 1px solid #aaa; cursor: default; font-size: 10px; }
+#miniGrid td.other { color: #aaa; }
+#miniGrid td.has { font-weight: 700; }
+#miniGrid td.today { outline: 1px solid #333; }
+#miniGrid td.shown { background: #dde8f6; }
+#miniGrid td:not(.kw):hover { background: #c7daf3; }
+.today-btn { display: flex; align-items: center; gap: 6px; margin: 4px auto 0; border: 0; background: none; cursor: pointer; }
+.today-box { width: 20px; height: 11px; border: 1px solid #5b8fd4; display: inline-block; }
+
+.side-section { flex: 1; min-height: 0; overflow: auto; background: #fff; border: 1px solid #c9d6e4; padding: 4px 6px; }
+.side-title { font-weight: 600; margin-bottom: 2px; }
+.side-sub { color: var(--muted); margin-bottom: 4px; }
+.wl-day { margin-top: 6px; font-weight: 600; cursor: pointer; }
+.wl-day:hover { color: var(--kw); }
+.wl-ev { display: flex; gap: 4px; padding-left: 8px; white-space: nowrap; overflow: hidden; }
+.wl-ev .t { color: var(--muted); flex-shrink: 0; }
+.wl-ev .n { overflow: hidden; text-overflow: ellipsis; }
+.wl-empty { color: var(--muted); font-style: italic; }
+
+/* ---------- Kopfzeile ---------- */
+#main { flex: 1; display: flex; flex-direction: column; min-width: 0; padding: 4px 6px 4px 0; }
+#topbar { display: flex; align-items: center; justify-content: space-between; height: 30px; padding-left: 18px; }
+.navbtn {
+  font-style: italic; font-weight: 700; color: #5b8fd4; cursor: pointer;
+  background: linear-gradient(#f3f8fe, #d3e4f7); border: 1px solid #9fbde0; padding: 2px 12px;
+}
+.navbtn:hover { background: linear-gradient(#fff, #c3d9f3); }
+#monthTitle {
+  margin: 0; font-size: 20px; font-style: italic; font-weight: 700; color: #4a86d8;
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px;
+  letter-spacing: -.3px;
+}
+
+/* ---------- Monatsraster ---------- */
+#grid {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  border: 1px solid var(--line); background: var(--cell); outline: none;
+}
+.week { flex: 1 1 0; min-height: 0; display: flex; border-top: 1px solid var(--line); }
+.week:first-child { border-top: 0; }
+.kwcol { width: 18px; flex-shrink: 0; color: var(--kw); font-size: 11px; text-align: center; padding-top: 50px; border-right: 1px solid var(--line); background: #fbfdff; }
+.wgrid { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); position: relative; }
+
+.dcell { grid-row: 1 / -1; border-left: 1px solid var(--line); background: var(--cell); position: relative; }
+.dcell:first-child { border-left: 0; }
+.dcell.other { background: var(--cell-other); }
+.dcell.sel::after { content: ""; position: absolute; inset: 0; border: 2px solid var(--sel); pointer-events: none; z-index: 3; }
+
+.dhdr {
+  grid-row: 1; margin: 5px 5px 3px; height: 21px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 6px; border: 1px solid #b9cde6; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, #5d8fd2, #cfe0f3);
+}
+.dhdr .num { font-weight: 700; font-size: 13px; }
+.dhdr.we { background: linear-gradient(90deg, #fea500, #fefa00); border-color: #f0c040; }
+.dhdr.other { background: linear-gradient(90deg, #d0d1cf, #f4f5f3); border-color: #d8d8d8; color: #888; }
+.dhdr.today .num { text-decoration: underline; text-decoration-thickness: 2px; }
+
+.bar {
+  z-index: 2; margin: 1px 5px; height: 17px; line-height: 15px; text-align: center;
+  border: 1px solid rgba(0,0,0,.35); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;
+  cursor: default;
+}
+.bar.cont-l { margin-left: 0; border-left-style: dashed; }
+.bar.cont-r { margin-right: 0; border-right-style: dashed; }
+
+.dlist { z-index: 2; min-height: 0; overflow: hidden; padding: 1px 0 2px; position: relative; }
+.ev {
+  margin: 0 5px 2px; height: 17px; line-height: 15px; padding: 0 3px;
+  border: 1px solid rgba(0,0,0,.38); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default;
+}
+.ev .tm, .bar .tm { margin-right: 6px; }
+/* Kompakt: halbe Höhe, kleine Schrift – bleibt lesbar */
+.ev.compact, .bar.compact { height: 11px; line-height: 9px; font-size: 9px; padding: 0 3px; margin-bottom: 1px; opacity: .85; }
+.bar.compact { margin-top: 4px; }
+.sb-btn.warn { background: #fff3c4; border-color: #e0b84a; }
+.other-month .ev, .other-month .bar { opacity: .5; }
+.ev.hl, .bar.hl { outline: 2px solid var(--sel); outline-offset: -1px; }
+
+.more {
+  position: absolute; right: 6px; bottom: 3px; z-index: 4; font-size: 10px; line-height: 12px;
+  padding: 0 3px; background: #fff; border: 1px solid #777; cursor: pointer;
+}
+.more:hover { background: #dde8f6; }
+
+/* ---------- Statusleiste ---------- */
+#statusbar {
+  height: 24px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 8px;
+  background: #f0f0f0; border-top: 1px solid #ccc; font-size: 11px; color: #333;
+}
+.sb-btn { border: 1px solid transparent; background: none; cursor: pointer; padding: 0 5px; font-size: 11px; }
+.sb-btn:hover { border-color: #aaa; background: #fff; }
+.sb-opt { display: flex; align-items: center; gap: 4px; }
+.sb-hint { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sb-spacer { flex: 1; }
+.sb-count { border-left: 1px solid #bbb; padding-left: 10px; white-space: nowrap; }
+
+/* ---------- Kontextmenü, Tagesliste, Dialog, Hinweis ---------- */
+.ctx {
+  position: fixed; z-index: 20; min-width: 220px; background: #fff; border: 1px solid #999;
+  box-shadow: 2px 3px 8px rgba(0,0,0,.25); padding: 3px 0;
+}
+.ctx[hidden] { display: none; }
+.ctx .mi { padding: 4px 16px; cursor: default; white-space: nowrap; }
+.ctx .mi:hover { background: #cfe0f3; }
+.ctx .mi.disabled { color: #aaa; }
+.ctx .mi.disabled:hover { background: none; }
+.ctx .sep { height: 1px; background: #ddd; margin: 3px 0; }
+.ctx .head { padding: 3px 16px 4px; color: var(--muted); font-size: 11px; border-bottom: 1px solid #eee; margin-bottom: 3px; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.daypop {
+  position: fixed; z-index: 15; width: 280px; max-height: 60vh; overflow: auto; background: #fff;
+  border: 1px solid var(--line); box-shadow: 2px 3px 10px rgba(0,0,0,.3);
+}
+.daypop[hidden] { display: none; }
+.daypop .dp-head { padding: 4px 8px; font-weight: 700; background: linear-gradient(90deg, #5d8fd2, #cfe0f3); }
+.daypop .dp-head.we { background: linear-gradient(90deg, #fea500, #fefa00); }
+.daypop .dp-body { padding: 4px 0; }
+.daypop .ev { white-space: normal; height: auto; min-height: 17px; }
+
+.dialog-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.3); display: flex; align-items: center; justify-content: center; z-index: 30; }
+.dialog-backdrop[hidden] { display: none; }
+.dialog { background: #fff; border: 1px solid #888; padding: 16px 18px; width: min(440px, 92vw); box-shadow: 0 8px 30px rgba(0,0,0,.3); font-size: 13px; }
+.dialog h3 { margin: 0 0 8px; font-size: 15px; }
+.dialog p { margin: 0 0 14px; white-space: pre-line; }
+.dlg-buttons { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.dlg-buttons button { padding: 4px 12px; border: 1px solid #999; background: linear-gradient(#fff, #e8e8e8); cursor: pointer; }
+.dlg-buttons button.danger { background: #c4262e; border-color: #c4262e; color: #fff; }
+
+.toast {
+  position: fixed; right: 16px; bottom: 34px; z-index: 25; max-width: 520px; padding: 8px 12px;
+  background: #333; color: #fff; font-size: 12px; white-space: pre-line; box-shadow: 0 4px 12px rgba(0,0,0,.3);
+}
+.toast[hidden] { display: none; }
+.toast.error { background: #a31d24; }
+
+/* ---------- Ausgeblendet/Kompakt-Liste (Statusleiste) ---------- */
+.hiddenpop {
+  position: fixed; right: 90px; bottom: 28px; z-index: 18; width: 340px; max-height: 70vh; overflow: auto;
+  background: #fff; border: 1px solid var(--line); box-shadow: 2px 3px 10px rgba(0,0,0,.3); padding-bottom: 6px;
+}
+.hiddenpop[hidden] { display: none; }
+.hp-head { padding: 5px 10px; font-weight: 700; background: linear-gradient(90deg, #5d8fd2, #cfe0f3); margin-bottom: 4px; }
+.hp-sw { display: flex; align-items: center; gap: 6px; padding: 1px 10px; }
+.hp-sec { display: flex; align-items: center; justify-content: space-between; margin: 8px 10px 2px; padding-top: 6px; border-top: 1px solid #ddd; font-weight: 600; }
+.hp-row { display: flex; align-items: center; gap: 6px; padding: 2px 10px; }
+.hp-row:hover { background: #eef4fb; }
+.hp-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hp-t small { color: var(--muted); }
+.hp-empty { padding: 0 10px; color: var(--muted); font-style: italic; }
+.hiddenpop button { font-size: 11px; padding: 0 6px; border: 1px solid #aaa; background: linear-gradient(#fff, #e8e8e8); cursor: pointer; flex-shrink: 0; }
+
+/* ---------- Feiertage & Sondertage ---------- */
+:root { --hol: #c0392b; --spec: #b8631a; }
+.side-hol { background: #fff; border: 1px solid #c9d6e4; padding: 4px 6px 6px; }
+.hol-radios { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 4px; margin: 2px 0 4px; }
+.hol-radios label span { overflow: hidden; text-overflow: ellipsis; }
+.hol-radios label, .hol-spec { display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; }
+.hol-spec input:disabled + span { color: #aaa; }
+.dhdr.holiday .num { color: var(--hol); }
+.hol, .spec {
+  margin: 0 5px 2px; height: 17px; line-height: 17px; padding: 0 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default;
+}
+.hol { color: var(--hol); font-weight: 700; }
+.spec { color: var(--spec); font-style: italic; }
+.mk-emoji { margin-right: 4px; font-style: normal; }
+.other-month .hol, .other-month .spec { opacity: .5; }
+.daypop .hol, .daypop .spec { white-space: normal; height: auto; }
+#miniGrid td.hol { color: var(--hol); font-weight: 700; }
+#miniGrid td.other.hol { color: #e5a39b; }
+.wl-hol .n { color: var(--hol); font-weight: 600; }
+.wl-spec .n { color: var(--spec); font-style: italic; }
+
+/* ---------- Raster mit Zeilen-Slots (1.4.0) ---------- */
+.wgrid { overflow: hidden; }
+.dhdr { pointer-events: auto; cursor: default; }
+.dhdr .hname { margin-left: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dhdr.holiday .hname { color: var(--hol); font-weight: 700; }
+.dhdr.other.holiday .hname { color: #d9a19a; }
+.wgrid > .ev, .wgrid > .bar, .wgrid > .spec { z-index: 2; align-self: start; }
+.wgrid > .bar { margin: 1px 5px; }
+.dim { opacity: .5; }
+.dhdr .more { position: static; margin-left: 8px; margin-right: auto; font-weight: 400; color: #222; flex-shrink: 0; }
+.dhdr .hname { margin-left: auto; }

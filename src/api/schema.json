@@ -1,0 +1,133 @@
+[
+  {
+    "namespace": "terminplaner",
+    "functions": [
+      {
+        "name": "getState",
+        "type": "function",
+        "async": true,
+        "description": "Liefert Schalter und Regeln (ausgeblendete/kompakte Termine).",
+        "parameters": []
+      },
+      {
+        "name": "setState",
+        "type": "function",
+        "async": true,
+        "description": "Speichert Schalter und Ausblenden-/Kompakt-Regeln (gemeinsam mit dem Add-on Kalender-Ansicht).",
+        "parameters": [
+          {
+            "name": "state",
+            "type": "object",
+            "additionalProperties": {
+              "type": "any"
+            }
+          }
+        ]
+      },
+      {
+        "name": "exportEvents",
+        "type": "function",
+        "async": true,
+        "description": "Exportiert die Termine (ganze Serien) als ICS in den Download-Ordner, liefert den Pfad.",
+        "parameters": [
+          {
+            "name": "refs",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "any"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "getRangeEvents",
+        "type": "function",
+        "async": true,
+        "description": "Alle Terminvorkommen im Bereich [from, to) (JJJJMMTT) aus allen aktiven Kalendern.",
+        "parameters": [
+          {
+            "name": "fromYmd",
+            "type": "string",
+            "pattern": "^\\d{8}$"
+          },
+          {
+            "name": "toYmd",
+            "type": "string",
+            "pattern": "^\\d{8}$"
+          }
+        ]
+      },
+      {
+        "name": "openEvent",
+        "type": "function",
+        "async": true,
+        "description": "Öffnet den Termin im Thunderbird-Bearbeitungsdialog.",
+        "parameters": [
+          {
+            "name": "ref",
+            "type": "object",
+            "additionalProperties": {
+              "type": "any"
+            }
+          }
+        ]
+      },
+      {
+        "name": "newEvent",
+        "type": "function",
+        "async": true,
+        "description": "Öffnet den Dialog für einen neuen Termin am angegebenen Tag (JJJJMMTT).",
+        "parameters": [
+          {
+            "name": "dayYmd",
+            "type": "string",
+            "pattern": "^\\d{8}$"
+          }
+        ]
+      },
+      {
+        "name": "deleteEvents",
+        "type": "function",
+        "async": true,
+        "description": "Legt ein ICS-Backup an und löscht danach Termine/Serien oder einzelne Vorkommen.",
+        "parameters": [
+          {
+            "name": "refs",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "any"
+              }
+            }
+          },
+          {
+            "name": "scope",
+            "type": "string",
+            "enum": [
+              "series",
+              "occurrence"
+            ]
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "name": "onItemsChanged",
+        "type": "function",
+        "description": "Kalendertermine wurden hinzugefügt, geändert, gelöscht oder neu geladen.",
+        "parameters": []
+      },
+      {
+        "name": "onChanged",
+        "type": "function",
+        "description": "Wird ausgelöst, wenn sich Regeln geändert haben (z. B. über das Kontextmenü).",
+        "parameters": []
+      }
+    ]
+  }
+]
