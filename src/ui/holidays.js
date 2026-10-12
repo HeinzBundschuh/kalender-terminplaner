@@ -1,6 +1,6 @@
 "use strict";
-/* Feiertage und Sondertage 1900–2100 – Österreich, Deutschland, Großbritannien (England & Wales), USA.
- * Holidays and special days 1900–2100 – Austria, Germany, United Kingdom (England & Wales), USA.
+/* Feiertage und Sondertage 1900–2100 – Österreich, Deutschland, Schweiz, Frankreich, Italien, Spanien, Großbritannien (England & Wales), USA.
+ * Holidays and special days 1900–2100 – Austria, Germany, Switzerland, France, Italy, Spain, United Kingdom (England & Wales), USA.
  *
  * Österreich: Feiertage und Sondertage wie im Endless Calendar Pro (getHolidays/getSpecial),
  * ergänzt um Jahresgrenzen (Nationalfeiertag ab 1965, Sommerzeit ab 1980).
