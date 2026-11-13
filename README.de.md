@@ -10,16 +10,17 @@ Ein Thunderbird-Add-on mit einer übersichtlichen Monatsansicht im Stil klassisc
 
 - Sechs-Wochen-Raster mit Kalenderwochen, blaue Tagesköpfe für Werktage und orange für das Wochenende, einzeilige Einträge mit Uhrzeit und Titel, mehrtägige Termine als durchgehende Balken.
 - **Monat für Monat per Mausrad blättern** – die Nachbarmonate sind vorgeladen, daher ohne Wartezeit. Bild↑/↓ und Pos1 (heute) gehen auch.
-- Doppelklick auf einen Termin öffnet Thunderbirds eigenen Dialog, Doppelklick auf einen leeren Tag legt einen neuen Termin an.
+- Doppelklick auf einen Termin öffnet ihn in einem eigenen Formular (Titel, Kalender, Datum, Uhrzeit, Ort, Beschreibung), Doppelklick auf einen leeren Tag legt einen neuen Termin an. Bei Serien lassen sich Titel, Ort und Beschreibung ändern; Datum und Uhrzeit einer Serie bitte im Thunderbird-Kalender.
 - Rechtsklick-Menü: öffnen, ausblenden (Serie oder einzelnes Vorkommen), kompakt anzeigen, als ICS exportieren, löschen (mit ICS-Backup).
 - **Feiertage 1900–2100** zur Auswahl: Österreich, Deutschland, Schweiz, Frankreich, Italien, Spanien, England & Wales, USA oder keine – mit historischen Regeln, wahlweise mit Sondertagen wie Adventsonntagen, Zeitumstellung oder Muttertag. Feiertage färben den Tag wie ein Wochenende.
 - Seitenleiste mit Mini-Kalender und den Terminen der nächsten sieben Tage.
-- Farben aus Kategorien oder Kalendern, wahlweise als sanfte Pastelltöne.
+- Farben der Kalender, wahlweise als sanfte Pastelltöne.
 - Ist ein Tag voll, zeigt `↓ n` im Tageskopf alle seine Termine.
 - Immer aktuell: Änderungen in Thunderbird erscheinen automatisch.
+- Ein Kalender, der nicht antwortet, bremst die Ansicht nicht aus: Nach 10 Sekunden wird er übersprungen und unten rechts gemeldet.
 - Deutsche und englische Oberfläche (je nach Thunderbird-Sprache). Arbeitet offline, sendet keine Daten.
 
-Die Regeln für Ausblenden und Kompakt teilt er sich mit dem Add-on [Kalender-Ansicht](https://github.com/HeinzBundschuh/kalender-ansicht): Was in einem ausgeblendet wird, ist auch im anderen ausgeblendet.
+Die Regeln für Ausblenden und Kompakt speichert der Terminplaner selbst. Bis Version 1.4.3 teilte er sie mit dem Add-on [Kalender-Ansicht](https://github.com/HeinzBundschuh/kalender-ansicht); das ist mit der offiziellen Kalender-Schnittstelle nicht mehr möglich.
 
 ## Installation
 
@@ -27,7 +28,7 @@ Die Regeln für Ausblenden und Kompakt teilt er sich mit dem Add-on [Kalender-An
 
 Benötigt Thunderbird 128 bis 158. Entwickelt und getestet unter Windows mit Thunderbird 153 ESR und 156.
 
-Das Add-on ist **nicht auf addons.thunderbird.net gelistet**: Es braucht eine eigene Experiment-API, und Thunderbird prüft neue Add-ons dieser Art derzeit nicht. Neue Versionen erscheinen deshalb hier; zum Aktualisieren die neuere `.xpi` über die alte installieren (die Einstellungen bleiben erhalten).
+Das Add-on gibt es auch auf [addons.thunderbird.net](https://addons.thunderbird.net/thunderbird/addon/calendar-month-planner/) (dort mit automatischen Updates). Neue Versionen erscheinen hier meist früher, weil die Prüfung auf addons.thunderbird.net einige Tage dauert. Zum Aktualisieren die neuere `.xpi` über die alte installieren; die Anzeigeeinstellungen bleiben erhalten.
 
 Nach der Installation gibt es die Schaltfläche *Terminplaner* in der Symbolleiste (in allen Bereichen, auch im Kalender) und den Eintrag *Terminplaner öffnen* im Menü *Extras* (mit der **Alt**-Taste einblenden, falls die Menüleiste versteckt ist).
 
@@ -45,7 +46,7 @@ Nach der Installation gibt es die Schaltfläche *Terminplaner* in der Symbolleis
 
 ## Funktionsweise
 
-Thunderbird hat noch keine offizielle Kalender-Schnittstelle für Add-ons. Das Add-on nutzt eine kleine **Experiment-API** (`src/api/`), die nur den Datenzugriff bereitstellt: Termine eines Zeitraums lesen, Thunderbirds Termindialog öffnen, Termine exportieren und löschen (immer mit Backup vorher), Kalenderänderungen melden und die Regeln für Ausblenden und Kompakt speichern. Die gesamte Monatsansicht, das Blättern, die Feiertagsberechnung (`src/ui/holidays.js`) und die Menüs stecken in normalen Add-on-Seiten (`src/ui/`).
+Thunderbird hat noch keine fertige Kalender-Schnittstelle für Add-ons. Das Add-on nutzt deshalb den **veröffentlichten Entwurf der Calendar-API** aus [thunderbird/webext-experiments](https://github.com/thunderbird/webext-experiments) (Ordner `calendar`); die Dateien unter `src/experiments/` sind unveränderte Kopien davon. Darüber liest es die Termine eines Zeitraums, legt Termine an, ändert und löscht sie (immer mit ICS-Backup vorher) und erfährt von Änderungen. `src/ui/planer-api.js` setzt daraus die Funktionen zusammen, die die Monatsansicht braucht, inklusive des eigenen Termin-Formulars. Die gesamte Monatsansicht, das Blättern, die Feiertagsberechnung (`src/ui/holidays.js`) und die Menüs stecken in normalen Add-on-Seiten (`src/ui/`).
 
 Weil Experiments in Thunderbirds Innenleben greifen, kann ein großes Thunderbird-Update eine Anpassung nötig machen. Kalenderdaten werden dadurch nicht verändert.
 

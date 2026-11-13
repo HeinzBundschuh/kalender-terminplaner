@@ -223,3 +223,16 @@ body.no-side #side { display: none; }
 .dim { opacity: .5; }
 .dhdr .more { position: static; margin-left: 8px; margin-right: auto; font-weight: 400; color: #222; flex-shrink: 0; }
 .dhdr .hname { margin-left: auto; }
+
+/* Termin-Formular (planer-api.js) */
+.editor { width: min(520px, 94vw); }
+.editor .ed-note { background: #fff8d6; border: 1px solid #e6d27a; padding: 6px 8px; }
+.editor .ed-row { display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 8px; margin-bottom: 7px; }
+.editor .ed-row > span:first-child { color: #444; }
+.editor .ed-fields { display: flex; gap: 6px; align-items: center; }
+.editor input[type="text"], .editor textarea, .editor select { flex: 1; min-width: 0; font: inherit; padding: 3px 5px; border: 1px solid #aaa; }
+.editor textarea { resize: vertical; }
+.editor input[type="date"], .editor input[type="time"] { font: inherit; padding: 2px 4px; border: 1px solid #aaa; }
+.editor input:disabled, .editor textarea:disabled, .editor select:disabled { background: #f0f0f0; color: #777; }
+.editor .ed-error { color: #a31d24; min-height: 1.2em; margin-bottom: 6px; }
+.dlg-buttons button.primary { background: #3d74c4; border-color: #3d74c4; color: #fff; }

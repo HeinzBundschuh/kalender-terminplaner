@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extName__",
   "description": "__MSG_extDesc__",
-  "version": "1.4.0",
+  "version": "1.4.4",
   "author": "Heinz Bundschuh",
   "default_locale": "en",
   "browser_specific_settings": {
@@ -17,7 +17,9 @@
     "64": "icons/icon.svg"
   },
   "permissions": [
-    "menus"
+    "menus",
+    "downloads",
+    "storage"
   ],
   "action": {
     "default_title": "__MSG_actionTitle__",
@@ -31,18 +33,79 @@
     ]
   },
   "experiment_apis": {
-    "terminplaner": {
-      "schema": "api/schema.json",
+    "calendar_calendars": {
+      "schema": "experiments/calendar/schema/calendar-calendars.json",
       "parent": {
         "scopes": [
           "addon_parent"
         ],
+        "script": "experiments/calendar/parent/ext-calendar-calendars.js",
         "paths": [
           [
-            "terminplaner"
+            "calendar",
+            "calendars"
           ]
+        ]
+      }
+    },
+    "calendar_items": {
+      "schema": "experiments/calendar/schema/calendar-items.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
         ],
-        "script": "api/implementation.js"
+        "script": "experiments/calendar/parent/ext-calendar-items.js",
+        "paths": [
+          [
+            "calendar",
+            "items"
+          ]
+        ]
+      }
+    },
+    "calendar_provider": {
+      "schema": "experiments/calendar/schema/calendar-provider.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "script": "experiments/calendar/parent/ext-calendar-provider.js",
+        "events": [
+          "startup"
+        ],
+        "paths": [
+          [
+            "calendar",
+            "provider"
+          ]
+        ]
+      }
+    },
+    "calendar_timezones": {
+      "schema": "experiments/calendar/schema/calendar-timezones.json",
+      "parent": {
+        "scopes": [
+          "addon_parent"
+        ],
+        "script": "experiments/calendar/parent/ext-calendar-timezones.js",
+        "paths": [
+          [
+            "calendar",
+            "timezones"
+          ]
+        ]
+      },
+      "child": {
+        "scopes": [
+          "addon_child"
+        ],
+        "script": "experiments/calendar/child/ext-calendar-timezones.js",
+        "paths": [
+          [
+            "calendar",
+            "timezones"
+          ]
+        ]
       }
     }
   }

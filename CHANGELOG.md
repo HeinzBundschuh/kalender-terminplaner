@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.4
+- Built on the published Calendar API draft (unmodified copies under `src/experiments/`) instead of the add-on's own Experiment API, so the version can be published on addons.thunderbird.net.
+- Auf den veröffentlichten Entwurf der Calendar-API umgestellt (unveränderte Kopien unter `src/experiments/`) statt der eigenen Experiment-API, damit die Version auf addons.thunderbird.net erscheinen kann.
+- Events open in the add-on's own form instead of Thunderbird's dialog; hide/compact rules are no longer shared with Calendar Hide & Compact; category colours are not available.
+- Termine öffnen sich im eigenen Formular statt in Thunderbirds Dialog; die Regeln für Ausblenden/Kompakt werden nicht mehr mit Kalender-Ansicht geteilt; Kategoriefarben sind nicht verfügbar.
+
+## 1.4.1 – 1.4.3
+- A calendar that does not respond no longer leaves the month view empty: it is skipped after 10 seconds, left out for 2 minutes and reported (“Calendar not responding: …”).
+- Ein Kalender, der nicht antwortet, lässt die Monatsansicht nicht mehr leer: Er wird nach 10 Sekunden übersprungen, 2 Minuten lang ausgelassen und gemeldet („Kalender antwortet nicht: …“).
+- Queries to Thunderbird run one after another instead of all at once; the week list reuses the loaded months.
+- Abfragen an Thunderbird laufen nacheinander statt gleichzeitig; die Wochenliste nutzt die bereits geladenen Monate.
+
 ## 1.4.0
 - New month grid layout: multi-day bars and single-day entries fill free rows per day (no more empty gaps, e.g. when a bar only covers Fri–Sun); nothing spills over into the next week; hidden entries are counted as “↓ n” in the day header.
 - Neues Rasterlayout: Balken und Tageseinträge füllen freie Zeilen je Tag (keine Leerplätze mehr); nichts ragt in die nächste Woche; nicht sichtbare Einträge zeigt „↓ n“ im Tageskopf.

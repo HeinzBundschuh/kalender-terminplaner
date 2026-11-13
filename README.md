@@ -10,16 +10,17 @@ A Thunderbird add-on with a clear month view in the style of classic desktop pla
 
 - Six-week grid with week numbers, blue day headers for weekdays and orange ones for weekends, one-line entries with time and title, multi-day events as continuous bars.
 - **Flip month by month with the mouse wheel** – neighbouring months are preloaded, so it is instant. PgUp/PgDn and Home (today) work too.
-- Double-click an event to open it in Thunderbird's own dialog, double-click an empty day to create a new event.
+- Double-click an event to open it in the add-on's own form (title, calendar, date, time, location, description), double-click an empty day to create a new event. For recurring events, title, location and description can be changed; please change the date and time of a series in the Thunderbird calendar.
 - Right-click menu: open, hide (series or single occurrence), show compactly, export as ICS, delete (with ICS backup).
 - **Holidays 1900–2100** to choose from: Austria, Germany, Switzerland, France, Italy, Spain, England & Wales, USA or none – with historical rules, and optional special days such as Advent Sundays, clock changes or Mother's Day. Holidays colour the day like a weekend.
 - Sidebar with a mini calendar and the events of the next seven days.
-- Colours from categories or calendars, optionally as soft pastel shades.
+- Calendar colours, optionally as soft pastel shades.
 - If a day is full, `↓ n` in the day header shows all its events.
 - Always up to date: changes made in Thunderbird appear automatically.
+- A calendar that does not respond does not slow down the view: after 10 seconds it is skipped and reported at the bottom right.
 - English and German user interface (following Thunderbird's language). Works offline, sends no data.
 
-Hide/compact rules are shared with the add-on [Calendar Hide & Compact](https://github.com/HeinzBundschuh/kalender-ansicht): what you hide in one is hidden in the other.
+The planner stores its hide/compact rules itself. Up to version 1.4.3 it shared them with the add-on [Calendar Hide & Compact](https://github.com/HeinzBundschuh/kalender-ansicht); the official calendar API does not allow that any more.
 
 ## Installation
 
@@ -27,7 +28,7 @@ Download the `.xpi` from the [releases](../../releases), then in Thunderbird ope
 
 Requires Thunderbird 128 up to 158. Developed and tested on Windows with Thunderbird 153 ESR and 156.
 
-The add-on is **not listed on addons.thunderbird.net**: it needs its own Experiment API, and Thunderbird currently does not review new add-ons of that kind. New versions are therefore published here; to update, install the newer `.xpi` over the old one (your settings are kept).
+The add-on is also available on [addons.thunderbird.net](https://addons.thunderbird.net/thunderbird/addon/calendar-month-planner/) (with automatic updates there). New versions usually appear here first, because the review on addons.thunderbird.net takes a few days. To update, install the newer `.xpi` over the old one; your display settings are kept.
 
 After installing there is a *Planner* button in the toolbar (in all spaces, including the calendar) and the entry *Open month planner* in the *Tools* menu (press **Alt** if the menu bar is hidden).
 
@@ -45,7 +46,7 @@ After installing there is a *Planner* button in the toolbar (in all spaces, incl
 
 ## How it works
 
-Thunderbird has no official calendar API for add-ons yet. The add-on uses a small **Experiment API** (`src/api/`) that only provides data access: read the events of a date range, open Thunderbird's event dialog, export and delete events (always with a backup first), report calendar changes and store the hide/compact rules. The whole month view, navigation, holiday calculation (`src/ui/holidays.js`) and menus live in normal add-on pages (`src/ui/`).
+Thunderbird has no finished calendar API for add-ons yet. The add-on therefore uses the **published draft of the Calendar API** from [thunderbird/webext-experiments](https://github.com/thunderbird/webext-experiments) (folder `calendar`); the files under `src/experiments/` are unmodified copies of it. Through it the add-on reads the events of a date range, creates, changes and deletes events (always with an ICS backup first) and is notified of changes. `src/ui/planer-api.js` builds the functions the month view needs on top of it, including the add-on's own event form. The whole month view, navigation, holiday calculation (`src/ui/holidays.js`) and menus live in normal add-on pages (`src/ui/`).
 
 Because Experiments reach into Thunderbird internals, a major Thunderbird update may require an update of the add-on. No calendar data is changed by that.
 

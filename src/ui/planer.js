@@ -3,7 +3,9 @@
  * Daten live aus Thunderbird. Blättern per Mausrad Monat für Monat;
  * Nachbarmonate werden vorab geladen und im Speicher gehalten. */
 
-const api = globalThis.browser ? browser.terminplaner : null; // null = Vorschau ohne Thunderbird
+// Früher eigene Experiment-API "terminplaner", jetzt der offizielle Calendar-API-Entwurf
+// (siehe planer-api.js). null = Vorschau ohne Thunderbird.
+const api = globalThis.browser?.calendar ? PlanerApi : null;
 const $ = (id) => document.getElementById(id);
 
 const MONTHS = IS_DE
@@ -35,6 +37,7 @@ function addMonths(d, n) { return new Date(d.getFullYear(), d.getMonth() + n, 1)
 function sameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
 function pad(n) { return String(n).padStart(2, "0"); }
 function ymd(d) { return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`; }
+function sameMonth(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth(); }
 function monthKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; }
 function dayIndex(d) { return Math.round((startOfDay(d) - new Date(1970, 0, 1)) / DAY); } // lokal, DST-fest
 function mondayBefore(d) { return addDays(d, -((d.getDay() + 6) % 7)); }
@@ -171,15 +174,40 @@ function prepare(ev) {
   return ev;
 }
 
+// Abfragen an Thunderbird nacheinander stellen: viele gleichzeitige Abfragen
+// (Raster, Vorabladen, Mini-Kalender, Wochenliste) bremsen die gemeinsame
+// Kalender-Datenbank so stark aus, dass alle ins Zeitlimit laufen.
+let apiQueue = Promise.resolve();
+let lastSkipped = [];
+function queryRange(fromYmd, toYmd) {
+  const run = () =>
+    api.getRangeEvents(fromYmd, toYmd).then((res) => {
+      // ältere API lieferte nur ein Array
+      const r = Array.isArray(res) ? { events: res, skipped: [] } : res;
+      lastSkipped = r.skipped || [];
+      return r;
+    });
+  const p = apiQueue.then(run, run);
+  apiQueue = p.catch(() => {});
+  return p;
+}
+
 function loadMonth(d) {
   const key = monthKey(d);
   if (cache.has(key)) return Promise.resolve(cache.get(key));
   if (pending.has(key)) return pending.get(key);
   const gen = generation;
-  const p = (api ? api.getRangeEvents(ymd(d), ymd(addMonths(d, 1))) : Promise.resolve(demoEvents(d)))
-    .then((list) => {
-      const out = list.map(prepare).filter(Boolean);
-      if (gen === generation) cache.set(key, out);
+  const p = (api
+    ? queryRange(ymd(d), ymd(addMonths(d, 1)))
+    : Promise.resolve({ events: demoEvents(d), skipped: [] }))
+    .then(({ events, skipped }) => {
+      const out = events.map(prepare).filter(Boolean);
+      // Unvollständige Ergebnisse nur kurz merken, damit nicht jede Ansicht
+      // erneut wartet, der Monat aber später vollständig nachgeladen wird
+      if (gen === generation) {
+        cache.set(key, out);
+        if (skipped.length) setTimeout(() => cache.get(key) === out && cache.delete(key), 150000);
+      }
       pending.delete(key);
       return out;
     })
@@ -200,7 +228,7 @@ async function eventsForGrid(first) {
 }
 
 function prefetch(first) {
-  for (const n of [2, -2, 3, -3]) loadMonth(addMonths(first, n)).catch(() => {});
+  for (const n of [2, -2]) loadMonth(addMonths(first, n)).catch(() => {});
 }
 
 function invalidate() {
@@ -228,8 +256,26 @@ async function render() {
     events = [];
   }
   if (token !== renderToken) return; // inzwischen weitergeblättert
-  drawGrid(first, events);
+  try {
+    drawGrid(first, events);
+  } catch (e) {
+    console.error("Terminplaner: Raster konnte nicht gezeichnet werden", e);
+    toast(t("Termine konnten nicht geladen werden: {0}", e.message || e), true);
+  }
+  reportSkipped();
   prefetch(first);
+}
+
+// Kalender, die nicht geantwortet haben, einmal melden (pro Zusammensetzung)
+let lastSkippedMsg = "";
+async function reportSkipped() {
+  if (!api) return;
+  try {
+    const names = lastSkipped;
+    const msg = names.length ? t("Kalender antwortet nicht: {0}", names.join(", ")) : "";
+    if (msg && msg !== lastSkippedMsg) toast(msg, true);
+    lastSkippedMsg = msg;
+  } catch (e) {}
 }
 
 // Zeilenhöhe eines Eintrags im Raster (px) und Höhe des Tageskopfs
@@ -425,9 +471,18 @@ async function renderWeekList() {
   $("todayText").textContent = fmtDate(today);
   let list = [];
   try {
-    list = api ? await api.getRangeEvents(ymd(today), ymd(addDays(today, 7))) : demoEvents(firstOfMonth(today));
-  } catch (e) { return; }
-  list = list.map(prepare).filter((ev) => ev && !isHidden(ev));
+    // aus den (zwischengespeicherten) Monaten statt einer eigenen Abfrage
+    const end = addDays(today, 7);
+    const months = sameMonth(today, end) ? [firstOfMonth(today)] : [firstOfMonth(today), firstOfMonth(end)];
+    const lists = await Promise.all(months.map(loadMonth));
+    const seen = new Map();
+    for (const l of lists) for (const ev of l) seen.set(evKey(ev), { ...ev });
+    list = [...seen.values()];
+  } catch (e) {
+    console.error("Terminplaner: Wochenliste konnte nicht geladen werden", e);
+    list = [];
+  }
+  list = list.filter((ev) => ev && !isHidden(ev));
   box.textContent = "";
   let any = false;
   for (let i = 0; i < 7; i++) {
