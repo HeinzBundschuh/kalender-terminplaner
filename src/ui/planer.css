@@ -236,3 +236,29 @@ body.no-side #side { display: none; }
 .editor input:disabled, .editor textarea:disabled, .editor select:disabled { background: #f0f0f0; color: #777; }
 .editor .ed-error { color: #a31d24; min-height: 1.2em; margin-bottom: 6px; }
 .dlg-buttons button.primary { background: #3d74c4; border-color: #3d74c4; color: #fff; }
+
+/* ---------- Verschieben, Kopieren, Löschen per ×, Rückgängig (1.5.0) ---------- */
+.ev, .bar { position: relative; }
+.ev .x, .bar .x {
+  display: none; position: absolute; right: 0; top: -1px; bottom: -1px; width: 16px;
+  text-align: center; font-weight: 700; font-size: 13px; line-height: 15px; cursor: pointer;
+  background: rgba(255,255,255,.85); color: #a31d24; border-left: 1px solid rgba(0,0,0,.25);
+}
+.ev.compact .x, .bar.compact .x { font-size: 10px; line-height: 9px; }
+.ev:hover .x, .bar:hover .x { display: block; }
+.ev .x:hover, .bar .x:hover { background: #c4262e; color: #fff; }
+body.dragging, body.dragging * { cursor: grabbing !important; user-select: none; }
+body.dragging .x { display: none !important; }
+.ghost {
+  position: fixed; z-index: 40; pointer-events: none; margin: 0; opacity: .9; text-align: left;
+  box-shadow: 0 6px 16px rgba(0,0,0,.35);
+}
+.ghost.copy::before { content: "+"; position: absolute; right: 2px; top: -1px; font-weight: 700; color: #1a7f37; }
+.dcell.drop { background: #d8ecff; box-shadow: inset 0 0 0 2px #3a8ee6; }
+.toast-undo {
+  margin-left: 12px; padding: 1px 10px; border: none; background: #f1c40f; color: #2c3e50;
+  font-weight: 700; font-size: 12px; cursor: pointer;
+}
+.toast-undo:hover { background: #f7d84a; }
+#undoBtn { font-weight: 700; }
+#undoBtn:disabled { opacity: .4; cursor: default; }

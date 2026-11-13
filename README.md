@@ -11,7 +11,10 @@ A Thunderbird add-on with a clear month view in the style of classic desktop pla
 - Six-week grid with week numbers, blue day headers for weekdays and orange ones for weekends, one-line entries with time and title, multi-day events as continuous bars.
 - **Flip month by month with the mouse wheel** – neighbouring months are preloaded, so it is instant. PgUp/PgDn and Home (today) work too.
 - Double-click an event to open it in the add-on's own form (title, calendar, date, time, location, description), double-click an empty day to create a new event. For recurring events, title, location and description can be changed; please change the date and time of a series in the Thunderbird calendar.
-- Right-click menu: open, hide (series or single occurrence), show compactly, export as ICS, delete (with ICS backup).
+- **Move and copy with the mouse:** drag an event to another day to move it; hold Ctrl or Shift to copy it instead. For recurring events this applies only to the dragged occurrence. Attendees and organizer are not copied, so no invitations are sent.
+- **Delete with ×:** hovering an event shows an ×; one click deletes it without asking (recurring: only this occurrence), after saving an ICS backup.
+- **Undo** for the last 30 changes (move, copy, paste, delete, edit, new events): ↩ button in the status bar, Ctrl+Z or the button in the message. Works as long as the planner tab is open.
+- Right-click menu: open, hide (series or single occurrence), show compactly, copy (then right-click a day → Paste), export as ICS, delete (with ICS backup).
 - **Holidays 1900–2100** to choose from: Austria, Germany, Switzerland, France, Italy, Spain, England & Wales, USA or none – with historical rules, and optional special days such as Advent Sundays, clock changes or Mother's Day. Holidays colour the day like a weekend.
 - Sidebar with a mini calendar and the events of the next seven days.
 - Calendar colours, optionally as soft pastel shades.
@@ -41,6 +44,10 @@ After installing there is a *Planner* button in the toolbar (in all spaces, incl
 | Reload | F5 |
 | Open event | double-click the event |
 | New event | double-click an empty day |
+| Move event | drag it to another day |
+| Copy event | drag it to another day with Ctrl or Shift held |
+| Delete event | × on the event |
+| Undo | Ctrl+Z or ↩ in the status bar |
 | Menu | right-click an event |
 | All events of a day | click `↓ n` in the day header |
 

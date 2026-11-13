@@ -11,7 +11,10 @@ Ein Thunderbird-Add-on mit einer übersichtlichen Monatsansicht im Stil klassisc
 - Sechs-Wochen-Raster mit Kalenderwochen, blaue Tagesköpfe für Werktage und orange für das Wochenende, einzeilige Einträge mit Uhrzeit und Titel, mehrtägige Termine als durchgehende Balken.
 - **Monat für Monat per Mausrad blättern** – die Nachbarmonate sind vorgeladen, daher ohne Wartezeit. Bild↑/↓ und Pos1 (heute) gehen auch.
 - Doppelklick auf einen Termin öffnet ihn in einem eigenen Formular (Titel, Kalender, Datum, Uhrzeit, Ort, Beschreibung), Doppelklick auf einen leeren Tag legt einen neuen Termin an. Bei Serien lassen sich Titel, Ort und Beschreibung ändern; Datum und Uhrzeit einer Serie bitte im Thunderbird-Kalender.
-- Rechtsklick-Menü: öffnen, ausblenden (Serie oder einzelnes Vorkommen), kompakt anzeigen, als ICS exportieren, löschen (mit ICS-Backup).
+- **Verschieben und Kopieren mit der Maus:** Termin auf einen anderen Tag ziehen verschiebt ihn, mit gedrückter Strg- oder Umschalttaste wird er kopiert. Bei Serien gilt das nur für das gezogene Vorkommen. Teilnehmer und Organisator werden nicht mitkopiert, damit keine Einladungen verschickt werden.
+- **Löschen mit ×:** Beim Darüberfahren erscheint an jedem Termin ein ×; ein Klick löscht ohne Nachfrage (bei Serien nur dieses Vorkommen), vorher wird ein ICS-Backup gespeichert.
+- **Rückgängig** für die letzten 30 Änderungen (Verschieben, Kopieren, Einfügen, Löschen, Bearbeiten, neue Termine): Knopf ↩ in der Statusleiste, Strg+Z oder der Knopf in der Meldung. Gilt, solange der Terminplaner-Tab offen ist.
+- Rechtsklick-Menü: öffnen, ausblenden (Serie oder einzelnes Vorkommen), kompakt anzeigen, kopieren (danach Rechtsklick auf einen Tag → Einfügen), als ICS exportieren, löschen (mit ICS-Backup).
 - **Feiertage 1900–2100** zur Auswahl: Österreich, Deutschland, Schweiz, Frankreich, Italien, Spanien, England & Wales, USA oder keine – mit historischen Regeln, wahlweise mit Sondertagen wie Adventsonntagen, Zeitumstellung oder Muttertag. Feiertage färben den Tag wie ein Wochenende.
 - Seitenleiste mit Mini-Kalender und den Terminen der nächsten sieben Tage.
 - Farben der Kalender, wahlweise als sanfte Pastelltöne.
@@ -41,6 +44,10 @@ Nach der Installation gibt es die Schaltfläche *Terminplaner* in der Symbolleis
 | Neu laden | F5 |
 | Termin öffnen | Doppelklick auf den Termin |
 | Neuer Termin | Doppelklick auf einen leeren Tag |
+| Termin verschieben | auf einen anderen Tag ziehen |
+| Termin kopieren | mit Strg oder Umschalt auf einen anderen Tag ziehen |
+| Termin löschen | × am Termin |
+| Rückgängig | Strg+Z oder ↩ in der Statusleiste |
 | Menü | Rechtsklick auf einen Termin |
 | Alle Termine eines Tages | Klick auf `↓ n` im Tageskopf |
 

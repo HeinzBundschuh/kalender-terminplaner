@@ -71,9 +71,13 @@ function h(tag, attrs = {}, ...children) {
 }
 
 let toastTimer = null;
-function toast(text, isError = false) {
+const tr = (...a) => t(...a);
+function toast(text, isError = false, withUndo = false) {
   const t = $("toast");
   t.textContent = text;
+  if (withUndo && undoStack.length) {
+    t.append(h("button", { class: "toast-undo", onclick: (e) => { e.stopPropagation(); t.hidden = true; performUndo(); } }, "↩ " + tr("Rückgängig")));
+  }
   t.classList.toggle("error", isError);
   t.hidden = false;
   clearTimeout(toastTimer);
@@ -403,6 +407,9 @@ function evEl(ev, cls, full = false) {
   });
   if (timed) el.append(h("span", { class: "tm" }, fmtTime(ev.start.ms)));
   el.append(ev.title || t("(ohne Titel)"));
+  if (api && !ev.readOnly) {
+    el.append(h("span", { class: "x", title: ev.recurring && ev.rid ? t("Nur dieses Vorkommen löschen") : t("Löschen") }, "×"));
+  }
   return el;
 }
 
@@ -573,6 +580,7 @@ function eventMenu(e, ev, el) {
       ? { label: "↕ " + t("„Alle Serien kompakt“ ausschalten"), action: () => { state.compactAllSeries = false; saveState(); } }
       : { label: hasCompactRule(ev) ? "↕ " + t("Wieder normal anzeigen") : "▬ " + (series ? t("Serie kompakt anzeigen") : t("Termin kompakt anzeigen")), action: () => toggleCompact(ev) },
     "-",
+    { label: "📄 " + (series ? t("Dieses Vorkommen kopieren") : t("Kopieren")), action: () => { clipboard = ev; toast("📄 " + t("„{0}“ kopiert – Rechtsklick auf einen Tag → „Einfügen“", ev.title)); } },
     { label: "📤 " + (series ? t("Serie als ICS exportieren") : t("Als ICS exportieren")), action: () => exportEv(ev) },
     "-",
     { label: "🗑 " + (ev.readOnly ? t("Löschen (Kalender schreibgeschützt)") : t("Löschen …")), disabled: ev.readOnly, action: () => deleteEv(ev) },
@@ -585,8 +593,9 @@ function dayMenu(e, d) {
   selectDay(d);
   showMenu(e.clientX, e.clientY, `${WDAYS[(d.getDay() + 6) % 7]}, ${fmtDate(d)}`, [
     { label: "➕ " + t("Neuer Termin …"), action: () => newEv(d) },
+    clipboard && { label: "📋 " + t("Einfügen: „{0}“", clipboard.title || t("(ohne Titel)")), action: () => copyEv(clipboard, dayIndex(d) - clipboard._s) },
     { label: "📋 " + t("Alle Termine dieses Tages"), action: () => showDay(d, e.clientX, e.clientY) },
-  ]);
+  ].filter(Boolean));
 }
 
 function selectDay(d) {
@@ -679,11 +688,92 @@ function toggleCompact(ev) {
 }
 async function openEv(ev) {
   if (!api) return;
-  try { await api.openEvent(ev); } catch (e) { toast(t("Öffnen fehlgeschlagen: {0}", e.message || e), true); }
+  try {
+    const steps = await api.openEvent(ev);
+    if (steps) pushUndo(t("„{0}“ bearbeitet", ev.title), steps);
+  } catch (e) { toast(t("Öffnen fehlgeschlagen: {0}", e.message || e), true); }
 }
 async function newEv(d) {
   if (!api) return;
-  try { await api.newEvent(ymd(d)); } catch (e) { toast(t("Neuer Termin fehlgeschlagen: {0}", e.message || e), true); }
+  try {
+    const steps = await api.newEvent(ymd(d));
+    if (steps) pushUndo(t("Neuer Termin"), steps);
+  } catch (e) { toast(t("Neuer Termin fehlgeschlagen: {0}", e.message || e), true); }
+}
+
+// ---------- Verschieben, Kopieren, Rückgängig ----------
+const UNDO_MAX = 30;
+const undoStack = [];
+let clipboard = null;
+let busy = false;
+function pushUndo(label, steps) {
+  if (!steps || !steps.length) return;
+  undoStack.push({ label, steps });
+  if (undoStack.length > UNDO_MAX) undoStack.shift();
+  updateUndoBtn();
+}
+function updateUndoBtn() {
+  const b = $("undoBtn");
+  const last = undoStack[undoStack.length - 1];
+  b.disabled = !last;
+  b.textContent = "↩" + (undoStack.length ? " " + undoStack.length : "");
+  b.title = last ? t("Rückgängig: {0} (Strg+Z)", last.label) : t("Nichts zum Rückgängigmachen");
+}
+async function runChange(fn) {
+  if (!api || busy) return;
+  busy = true;
+  try { await fn(); } finally { busy = false; }
+}
+function daysText(days) {
+  return days === 1 || days === -1 ? t("1 Tag") : t("{0} Tage", Math.abs(days));
+}
+function moveEv(ev, days) {
+  return runChange(async () => {
+    try {
+      const steps = await api.moveEvent(ev, days);
+      const label = t("„{0}“ verschoben", ev.title);
+      pushUndo(label, steps);
+      toast("↔ " + label + ` (${days > 0 ? "+" : "−"}${daysText(days)})` + (ev.rid ? " – " + t("nur dieses Vorkommen") : ""), false, true);
+      invalidate();
+    } catch (e) { toast(t("Verschieben fehlgeschlagen: {0}", e.message || e), true); }
+  });
+}
+function copyEv(ev, days) {
+  return runChange(async () => {
+    try {
+      const steps = await api.copyEvent(ev, days);
+      const label = t("„{0}“ kopiert", ev.title);
+      pushUndo(label, steps);
+      toast("📄 " + label + (days ? ` (${days > 0 ? "+" : "−"}${daysText(days)})` : ""), false, true);
+      invalidate();
+    } catch (e) { toast(t("Kopieren fehlgeschlagen: {0}", e.message || e), true); }
+  });
+}
+// × im Termin: ohne Nachfrage löschen (bei Serien nur dieses Vorkommen), Backup und Rückgängig wie gewohnt
+function quickDelete(ev) {
+  return runChange(async () => {
+    const scope = ev.recurring && ev.rid ? "occurrence" : "series";
+    try {
+      const res = await api.deleteEvents([ev], scope);
+      if (res.deleted) pushUndo(t("„{0}“ gelöscht", ev.title), res.undo);
+      let text = res.deleted ? "🗑 " + t(scope === "occurrence" ? "„{0}“ gelöscht (nur dieses Vorkommen)." : "„{0}“ gelöscht.", ev.title) : t("Nichts gelöscht.");
+      if (res.errors.length) text += "\n" + res.errors.join("\n");
+      toast(text, res.errors.length > 0, res.deleted > 0);
+      invalidate();
+    } catch (e) { toast(t("Löschen fehlgeschlagen: {0}", e.message || e), true); }
+  });
+}
+function performUndo() {
+  return runChange(async () => {
+    const op = undoStack.pop();
+    updateUndoBtn();
+    if (!op) return;
+    try {
+      const res = await api.undo(op.steps);
+      toast(res.errors.length ? t("Rückgängig unvollständig: {0}", res.errors.join("; ")) : "↩ " + t("Rückgängig: {0}", op.label), res.errors.length > 0);
+    } catch (e) { toast(t("Rückgängig fehlgeschlagen: {0}", e.message || e), true); }
+    invalidate();
+  });
 }
 async function exportEv(ev) {
   if (!api) return;
@@ -704,12 +794,72 @@ async function deleteEv(ev) {
   if (!scope) return;
   try {
     const res = await api.deleteEvents([ev], scope);
+    if (res.deleted) pushUndo(t("„{0}“ gelöscht", ev.title), res.undo);
     let text = res.deleted ? "🗑 " + t(scope === "occurrence" ? "„{0}“ gelöscht (nur dieses Vorkommen)." : "„{0}“ gelöscht.", ev.title) : t("Nichts gelöscht.");
     if (res.backupPath) text += "\n" + t("Backup: {0}", res.backupPath);
     if (res.errors.length) text += "\n" + res.errors.join("\n");
-    toast(text, res.errors.length > 0);
+    toast(text, res.errors.length > 0, res.deleted > 0);
     invalidate();
   } catch (e) { toast(t("Löschen fehlgeschlagen: {0}", e.message || e), true); }
+}
+
+// ---------- Ziehen mit der Maus: verschieben, mit Strg/Umschalt kopieren ----------
+let drag = null;
+let suppressClick = false;
+function dragTargetDay(x, y) {
+  return dayFromPoint(x, y);
+}
+function endDrag() {
+  if (drag && drag.ghost) drag.ghost.remove();
+  document.body.classList.remove("dragging");
+  document.querySelectorAll(".dcell.drop").forEach((c) => c.classList.remove("drop"));
+  drag = null;
+}
+function wireDrag(grid) {
+  grid.addEventListener("mousedown", (e) => {
+    if (e.button !== 0 || !api || e.target.closest(".x")) return;
+    const hit = evFromTarget(e.target);
+    if (!hit || !hit.ev || hit.ev.readOnly) return;
+    const from = dayFromPoint(e.clientX, e.clientY);
+    if (!from) return;
+    drag = { ev: hit.ev, el: hit.el, x: e.clientX, y: e.clientY, from, ghost: null };
+  });
+  document.addEventListener("mousemove", (e) => {
+    if (!drag) return;
+    if (!drag.ghost) {
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+      const r = drag.el.getBoundingClientRect();
+      drag.ghost = drag.el.cloneNode(true);
+      drag.ghost.classList.add("ghost");
+      drag.ghost.style.width = Math.min(r.width, 220) + "px";
+      drag.offX = Math.min(e.clientX - r.left, 200);
+      drag.offY = e.clientY - r.top;
+      document.body.append(drag.ghost);
+      document.body.classList.add("dragging");
+      hidePopups();
+    }
+    drag.ghost.style.left = e.clientX - drag.offX + "px";
+    drag.ghost.style.top = e.clientY - drag.offY + "px";
+    drag.ghost.classList.toggle("copy", e.ctrlKey || e.shiftKey);
+    const d = dragTargetDay(e.clientX, e.clientY);
+    const key = d ? ymd(d) : "";
+    document.querySelectorAll(".dcell.drop").forEach((c) => { if (c.dataset.day !== key) c.classList.remove("drop"); });
+    if (d) { const c = document.querySelector(`.dcell[data-day="${key}"]`); if (c) c.classList.add("drop"); }
+  });
+  document.addEventListener("mouseup", (e) => {
+    if (!drag) return;
+    const d = drag;
+    const started = !!d.ghost;
+    endDrag();
+    if (!started) return;
+    suppressClick = true;
+    setTimeout(() => (suppressClick = false), 0);
+    const to = dragTargetDay(e.clientX, e.clientY);
+    if (!to) return;
+    const days = dayIndex(to) - dayIndex(d.from);
+    if (e.ctrlKey || e.shiftKey) copyEv(d.ev, days);
+    else if (days) moveEv(d.ev, days);
+  });
 }
 
 // ---------- Ereignisse ----------
@@ -739,7 +889,14 @@ function wire() {
     onWheel(e);
   }, { passive: false });
 
+  wireDrag(grid);
   grid.addEventListener("click", (e) => {
+    if (suppressClick) return;
+    if (e.target.classList.contains("x")) {
+      const hit = evFromTarget(e.target);
+      if (hit && hit.ev) quickDelete(hit.ev);
+      return;
+    }
     if (e.target.classList.contains("more")) {
       const d = dayFromTarget(e.target);
       if (d) { selectDay(d); showDay(d, e.clientX, e.clientY); }
@@ -751,6 +908,7 @@ function wire() {
     grid.focus();
   });
   grid.addEventListener("dblclick", (e) => {
+    if (e.target.classList.contains("x")) return;
     const hit = evFromTarget(e.target);
     if (hit && hit.ev) return openEv(hit.ev);
     const d = dayFromTarget(e.target) || dayFromPoint(e.clientX, e.clientY);
@@ -763,7 +921,12 @@ function wire() {
     if (d) dayMenu(e, d);
   });
 
-  $("dayPop").addEventListener("dblclick", (e) => { const hit = evFromTarget(e.target); if (hit && hit.ev) openEv(hit.ev); });
+  $("dayPop").addEventListener("click", (e) => {
+    if (!e.target.classList.contains("x")) return;
+    const hit = evFromTarget(e.target);
+    if (hit && hit.ev) { $("dayPop").hidden = true; quickDelete(hit.ev); }
+  });
+  $("dayPop").addEventListener("dblclick", (e) => { if (e.target.classList.contains("x")) return; const hit = evFromTarget(e.target); if (hit && hit.ev) openEv(hit.ev); });
   $("dayPop").addEventListener("contextmenu", (e) => { const hit = evFromTarget(e.target); if (hit && hit.ev) eventMenu(e, hit.ev, hit.el); else e.preventDefault(); });
 
   document.addEventListener("mousedown", (e) => {
@@ -779,7 +942,13 @@ function wire() {
       if (e.key === "Escape") $("dlgButtons").lastChild.click();
       return;
     }
-    if (e.key === "Escape") return hidePopups();
+    if (e.key === "Escape") { if (drag) endDrag(); return hidePopups(); }
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
+      if (document.querySelector(".editor-backdrop") || (e.target.closest && e.target.closest("input, textarea, select"))) return;
+      e.preventDefault();
+      performUndo();
+      return;
+    }
     if (e.key === "PageDown" || (e.ctrlKey && e.key === "ArrowRight")) { e.preventDefault(); goMonth(1); }
     else if (e.key === "PageUp" || (e.ctrlKey && e.key === "ArrowLeft")) { e.preventDefault(); goMonth(-1); }
     else if (e.key === "Home") { e.preventDefault(); goTo(new Date()); }
@@ -792,6 +961,8 @@ function wire() {
   $("miniNext").addEventListener("click", () => { miniCur = addMonths(miniCur, 1); miniDays = new Set(); renderMini(); });
   $("todayBtn").addEventListener("click", () => goTo(new Date()));
   $("refreshBtn").addEventListener("click", invalidate);
+  $("undoBtn").addEventListener("click", performUndo);
+  updateUndoBtn();
   $("hiddenBtn").addEventListener("click", (e) => { e.stopPropagation(); toggleHiddenPop(); });
   // Feiertage: Radiobuttons + Sondertage
   for (const r of document.querySelectorAll('input[name="holRegion"]')) {

@@ -410,6 +410,7 @@ const PlanerApi = (() => {
     }
 
     let deleted = 0;
+    const undo = [];
     const state = await getState();
     for (const job of jobs) {
       try {
@@ -421,9 +422,11 @@ const PlanerApi = (() => {
             if (rid && rid.ms === job.inst.ms) text = text.includes(ex + "\r\n") ? swap(text, ex + "\r\n", "") : swap(text, ex, "");
           }
           await browser.calendar.items.update(job.ref.calendarId, job.ref.id, { format: "ical", item: text });
+          undo.push({ kind: "restore", calendarId: job.ref.calendarId, id: job.ref.id, text: job.text });
           state.rules = state.rules.filter((x) => !(x.id === job.ref.id && x.rid === job.ref.rid));
         } else {
           await browser.calendar.items.remove(job.ref.calendarId, job.ref.id);
+          undo.push({ kind: "recreate", calendarId: job.ref.calendarId, id: job.ref.id, text: job.text });
           state.rules = state.rules.filter((x) => x.id !== job.ref.id);
         }
         deleted++;
@@ -432,7 +435,7 @@ const PlanerApi = (() => {
       }
     }
     await setState(state);
-    return { deleted, backupPath, errors };
+    return { deleted, backupPath, errors, undo };
   }
 
   // =====================================================================
@@ -641,6 +644,7 @@ const PlanerApi = (() => {
         valueLines(vals, scope !== "series")));
     }
     await browser.calendar.items.update(ev.calendarId, ev.id, { format: "ical", item: newText });
+    return [{ kind: "restore", calendarId: ev.calendarId, id: ev.id, text }];
   }
 
   async function newEvent(dayYmd) {
@@ -663,7 +667,156 @@ const PlanerApi = (() => {
       ...valueLines(vals, true).filter(Boolean).map(fold),
       "END:VEVENT", "END:VCALENDAR", "",
     ].join("\r\n");
-    await browser.calendar.items.create(vals.calendarId, { type: "event", format: "ical", item: ical });
+    const created = await browser.calendar.items.create(vals.calendarId, { type: "event", format: "ical", item: ical });
+    return created?.id ? [{ kind: "remove", calendarId: vals.calendarId, id: created.id }] : [];
+  }
+
+  // =====================================================================
+  // Verschieben, Kopieren, Rückgängig / move, copy, undo
+  // =====================================================================
+  const newUid = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+  // Datums-/Zeitwert um n Tage verschieben; die Form (Datum, TZID, ohne Zone, UTC) bleibt.
+  function shiftValue(value, days) {
+    const m = /^(\d{4})(\d{2})(\d{2})(T(\d{2})(\d{2})(\d{2})(Z)?)?$/.exec(value);
+    if (!m) return null;
+    const [, y, mo, d, tpart, hh, mi, ss, z] = m;
+    if (z) {
+      // UTC: in Ortszeit verschieben, damit die angezeigte Uhrzeit auch über eine Zeitumstellung gleich bleibt
+      const loc = new Date(Date.UTC(+y, +mo - 1, +d, +hh, +mi, +ss));
+      return utcStamp(new Date(loc.getFullYear(), loc.getMonth(), loc.getDate() + days, loc.getHours(), loc.getMinutes(), loc.getSeconds()));
+    }
+    return ymdOf(new Date(+y, +mo - 1, +d + days)) + (tpart || "");
+  }
+  // DTSTART/DTEND eines VEVENT (oberste Ebene) um n Tage verschieben
+  function shiftTimes(vevent, days) {
+    let depth = 0, ok = true;
+    const out = vevent.split(/\r\n/).map((line) => {
+      if (/^BEGIN:/i.test(line)) depth++;
+      let res = line;
+      if (depth === 1) {
+        const m = /^(DTSTART|DTEND)((?:;[^:]*)?):(.*)$/i.exec(line);
+        if (m) {
+          const v = shiftValue(m[3].trim(), days);
+          if (v == null) ok = false; else res = `${m[1]}${m[2]}:${v}`;
+        }
+      }
+      if (/^END:/i.test(line)) depth--;
+      return res;
+    });
+    return ok ? out.join("\r\n") : null;
+  }
+  // Beginn/Ende eines Vorkommens als Zeilen (in Ortszeit), um n Tage verschoben
+  function occurrenceTimeLines(ev, days) {
+    if (ev.start.allDay) {
+      const [y, m, d] = ev.start.day.split("-").map(Number);
+      const [ey, em, ed] = (ev.end?.day || ev.start.day).split("-").map(Number);
+      const s = new Date(y, m - 1, d + days);
+      let e = new Date(ey, em - 1, ed + days);
+      if (e <= s) e = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 1);
+      return [dateLine("DTSTART", s, true), dateLine("DTEND", e, true)];
+    }
+    const shift = (ms) => { const x = new Date(ms); return new Date(x.getFullYear(), x.getMonth(), x.getDate() + days, x.getHours(), x.getMinutes(), x.getSeconds()); };
+    return [dateLine("DTSTART", shift(ev.start.ms), false), dateLine("DTEND", shift(ev.end ? ev.end.ms : ev.start.ms), false)];
+  }
+  async function loadForChange(ev) {
+    const calendar = (await calendars()).find((c) => c.id === ev.calendarId);
+    if (!calendar) throw new Error(t("Kalender nicht gefunden"));
+    if (calendar.readOnly) throw new Error(t("„{0}“ ist schreibgeschützt", calendar.name));
+    const text = await getMaster(ev.calendarId, ev.id);
+    const master = text && masterBlock(text);
+    if (!master) throw new Error(t("„{0}“ nicht mehr vorhanden", ev.title || ev.id));
+    const unknown = unknownTimezones(text);
+    if (unknown.length) throw new Error(t("„{0}“: unbekannte Zeitzone ({1}) – bitte im Thunderbird-Kalender ändern", ev.title, unknown.join(", ")));
+    let exception = null, inst = null;
+    if (ev.rid) {
+      inst = instanceInfo(ev.rid);
+      if (!inst) throw new Error(t("Vorkommen von „{0}“ nicht gefunden", ev.title));
+      exception = components(text, "VEVENT").filter(isException).find((ex) => {
+        const rid = parseDate(prop(ownLines(ex), "RECURRENCE-ID"));
+        return rid && rid.ms === inst.ms;
+      }) || null;
+    }
+    return { text, master, exception, inst };
+  }
+
+  // Termin um n Tage verschieben; bei Serien nur dieses Vorkommen.
+  async function moveEvent(ev, days) {
+    const { text, master, exception, inst } = await loadForChange(ev);
+    const stampLines = [`DTSTAMP:${utcStamp()}`, `LAST-MODIFIED:${utcStamp()}`];
+    let newText;
+    if (!ev.rid) {
+      const moved = shiftTimes(master, days);
+      if (!moved) throw new Error(t("„{0}“: Datum nicht lesbar", ev.title));
+      newText = swap(text, master, setProps(moved, ["DTSTAMP", "LAST-MODIFIED"], stampLines));
+    } else if (exception) {
+      newText = swap(text, exception, setProps(exception, [...TIME_PROPS, "DTSTAMP", "LAST-MODIFIED"], [...occurrenceTimeLines(ev, days), ...stampLines]));
+    } else {
+      const base = setProps(master, ["RRULE", "RDATE", "EXDATE", "EXRULE", ...TIME_PROPS, "DTSTAMP", "LAST-MODIFIED"],
+        [`RECURRENCE-ID${inst.ical}`, ...occurrenceTimeLines(ev, days), ...stampLines]);
+      const endAt = text.lastIndexOf("END:VCALENDAR");
+      newText = text.slice(0, endAt) + base + "\r\n" + text.slice(endAt);
+    }
+    await browser.calendar.items.update(ev.calendarId, ev.id, { format: "ical", item: newText });
+    return [{ kind: "restore", calendarId: ev.calendarId, id: ev.id, text }];
+  }
+
+  // Kopie eines Termins n Tage versetzt anlegen (bei Serien: nur dieses Vorkommen, als Einzeltermin).
+  // Teilnehmer und Organisator werden nicht mitkopiert, damit keine Einladungen verschickt werden.
+  const COPY_DROP = ["UID", "DTSTAMP", "CREATED", "LAST-MODIFIED", "SEQUENCE", "RRULE", "RDATE", "EXDATE", "EXRULE",
+    "RECURRENCE-ID", "ATTENDEE", "ORGANIZER", "X-MOZ-GENERATION", "X-MOZ-LASTACK", "X-MOZ-SNOOZE-TIME[\\w-]*"];
+  async function copyEvent(ev, days, calendarId = ev.calendarId) {
+    const target = (await calendars()).find((c) => c.id === calendarId);
+    if (!target || target.readOnly) throw new Error(t("Kein beschreibbarer Kalender vorhanden."));
+    const { text, master, exception } = await loadForChange({ ...ev, calendarId: ev.calendarId });
+    const source = exception || master;
+    const now = utcStamp();
+    let vevent;
+    if (ev.rid) {
+      vevent = setProps(source, [...COPY_DROP, ...TIME_PROPS], [`UID:${newUid()}`, `DTSTAMP:${now}`, `CREATED:${now}`, ...occurrenceTimeLines(ev, days)]);
+    } else {
+      const moved = shiftTimes(source, days);
+      if (!moved) throw new Error(t("„{0}“: Datum nicht lesbar", ev.title));
+      vevent = setProps(moved, COPY_DROP, [`UID:${newUid()}`, `DTSTAMP:${now}`, `CREATED:${now}`]);
+    }
+    const ical = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Heinz Bundschuh//Kalender-Terminplaner//DE",
+      ...components(text, "VTIMEZONE"), vevent, "END:VCALENDAR", ""].join("\r\n");
+    const created = await browser.calendar.items.create(calendarId, { type: "event", format: "ical", item: ical });
+    return created?.id ? [{ kind: "remove", calendarId, id: created.id }] : [];
+  }
+
+  // Rückgängig: Schritte in umgekehrter Reihenfolge ausführen
+  async function undo(steps) {
+    const errors = [];
+    for (const step of [...steps].reverse()) {
+      try {
+        if (step.kind === "remove") {
+          await browser.calendar.items.remove(step.calendarId, step.id);
+        } else if (step.kind === "restore") {
+          if (await getMaster(step.calendarId, step.id)) {
+            await browser.calendar.items.update(step.calendarId, step.id, { format: "ical", item: step.text });
+          } else {
+            await recreate(step);
+          }
+        } else if (step.kind === "recreate") {
+          await recreate(step);
+        }
+      } catch (e) {
+        errors.push(e.message || String(e));
+      }
+    }
+    return { errors };
+  }
+  async function recreate(step) {
+    try {
+      await browser.calendar.items.create(step.calendarId, { type: "event", format: "ical", item: step.text });
+    } catch (e) {
+      // Manche Server (z. B. Google) nehmen eine gelöschte UID nicht wieder an: dann mit neuer UID
+      const uid = prop(step.text, "UID")?.value;
+      if (!uid) throw e;
+      const text = step.text.split(`UID:${uid}`).join(`UID:${newUid()}`);
+      await browser.calendar.items.create(step.calendarId, { type: "event", format: "ical", item: text });
+    }
   }
 
   // =====================================================================
@@ -695,7 +848,8 @@ const PlanerApi = (() => {
 
   return {
     getState, setState, getRangeEvents, exportEvents, deleteEvents, openEvent, newEvent,
+    moveEvent, copyEvent, undo,
     onItemsChanged, onChanged,
-    _internal: { toEvent, setProps, instanceInfo, parseDate, unfold, components, ownLines, prop, masterBlock },
+    _internal: { toEvent, setProps, instanceInfo, parseDate, unfold, components, ownLines, prop, masterBlock, shiftValue, shiftTimes },
   };
 })();

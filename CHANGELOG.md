@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.0
+- Drag an event to another day to move it; with Ctrl or Shift held it is copied (recurring events: only the dragged occurrence; attendees and organizer are not copied).
+- Termin auf einen anderen Tag ziehen verschiebt ihn, mit Strg oder Umschalt wird er kopiert (bei Serien nur das gezogene Vorkommen; Teilnehmer und Organisator werden nicht mitkopiert).
+- Copy and paste via the right-click menu: “Copy” on an event, then “Paste” on a day.
+- Kopieren und Einfügen über das Rechtsklick-Menü: „Kopieren“ am Termin, dann „Einfügen“ am Tag.
+- × on every event deletes it without asking (recurring: only this occurrence), with ICS backup.
+- × an jedem Termin löscht ohne Nachfrage (bei Serien nur dieses Vorkommen), mit ICS-Backup.
+- Undo for the last 30 changes: ↩ button in the status bar, Ctrl+Z or the button in the message.
+- Rückgängig für die letzten 30 Änderungen: Knopf ↩ in der Statusleiste, Strg+Z oder der Knopf in der Meldung.
+
 ## 1.4.4
 - Built on the published Calendar API draft (unmodified copies under `src/experiments/`) instead of the add-on's own Experiment API, so the version can be published on addons.thunderbird.net.
 - Auf den veröffentlichten Entwurf der Calendar-API umgestellt (unveränderte Kopien unter `src/experiments/`) statt der eigenen Experiment-API, damit die Version auf addons.thunderbird.net erscheinen kann.
